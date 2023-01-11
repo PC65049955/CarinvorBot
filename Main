@@ -1,0 +1,57 @@
+import tweepy
+import time
+import pickle
+
+# Authenticate to Twitter
+auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret, access_token, access_token_secret)
+
+# Create API object
+api = tweepy.API(auth)
+
+# Set of already retweeted tweets
+try:
+    with open("already_retweeted.pkl", "rb") as f:
+        already_retweeted = pickle.load(f)
+except:
+    already_retweeted = set()
+
+while True:
+    # Search for tweets containing the hashtags '#bitcoin', '#beef', and '#carnivore'
+    tweets = api.search(q='#bitcoin OR #beef OR #carnivore')
+    # Iterate over the tweets
+    for tweet in tweets:
+        # Check if the tweet has an image
+        if 'media' in tweet.entities and tweet.id not in already_retweeted:
+            # Get the media id
+            media_id = tweet.entities['media'][0]['id']
+            try:
+                # Create a new status with the same text as the original tweet
+                # and include the image using the media_ids parameter
+                new_status = api.update_status(status=tweet.text, media_ids=[media_id])
+                already_retweeted.add(tweet.id)
+                print("Successfully tweeted with image")
+            except tweepy.RateLimitError as e:
+                retry_after = e.api_code['headers']['retry-after']
+                time.sleep(int(retry_after))
+new_status = api.update_status(status=tweet.text, media_ids=[media_id])
+already_retweeted.add(tweet.id)
+print("Successfully tweeted with image after retrying")
+except Exception as e:
+print("Error Occured", e)
+elif tweet.id not in already_retweeted:
+try:
+new_status = api.update_status(status=tweet.text)
+already_retweeted.add(tweet.id)
+print("Successfully tweeted without image")
+except tweepy.RateLimitError as e:
+retry_after = e.api_code['headers']['retry-after']
+time.sleep(int(retry_after))
+new_status = api.update_status(status=tweet.text)
+already_retweeted.add(tweet.id)
+print("Successfully tweeted without image after retrying")
+except Exception as e:
+print("Error Occured", e)
+# save the state of already_retweeted set
+with open("already_retweeted.pkl", "wb") as f:
+pickle.dump(already_retweeted,f)
+time.sleep(30)
